@@ -16,7 +16,14 @@ class ElasticsearchEngine extends Engine
      * @var string
      */
     protected $index;
-    
+
+    /**
+     * Default type
+     *
+     * @var string
+     */
+    protected $type = 'doc';
+
     /**
      * Elastic where the instance of Elastic|\Elasticsearch\Client is stored.
      *
@@ -27,8 +34,8 @@ class ElasticsearchEngine extends Engine
     /**
      * Create a new engine instance.
      *
-     * @param  \Elasticsearch\Client  $elastic
-     * @return void
+     * @param  \Elasticsearch\Client $elastic
+     * @param $index
      */
     public function __construct(Elastic $elastic, $index)
     {
@@ -50,9 +57,9 @@ class ElasticsearchEngine extends Engine
         {
             $params['body'][] = [
                 'update' => [
-                    '_id' => $model->getKey(),
-                    '_index' => $this->index,
-                    '_type' => $model->searchableAs(),
+                    '_id' => $model->getScoutKey(),
+                    '_index' => $this->toIndex($model),
+                    '_type' => $this->type,
                 ]
             ];
             $params['body'][] = [
@@ -63,7 +70,6 @@ class ElasticsearchEngine extends Engine
 
         $this->elastic->bulk($params);
     }
-
     /**
      * Remove the given model from the index.
      *
@@ -73,14 +79,13 @@ class ElasticsearchEngine extends Engine
     public function delete($models)
     {
         $params['body'] = [];
-
         $models->each(function($model) use (&$params)
         {
             $params['body'][] = [
                 'delete' => [
-                    '_id' => $model->getKey(),
-                    '_index' => $this->index,
-                    '_type' => $model->searchableAs(),
+                    '_id' => $model->getScoutKey(),
+                    '_index' => $this->toIndex($model),
+                    '_type' => $this->type,
                 ]
             ];
         });
@@ -133,8 +138,8 @@ class ElasticsearchEngine extends Engine
     protected function performSearch(Builder $builder, array $options = [])
     {
         $params = [
-            'index' => $this->index,
-            'type' => $builder->index ?: $builder->model->searchableAs(),
+            'index' => $this->toIndex($builder->model),
+            'type' => $this->type,
             'body' => [
                 'query' => [
                     'bool' => [
@@ -255,5 +260,28 @@ class ElasticsearchEngine extends Engine
         return collect($builder->orders)->map(function($order) {
             return [$order['column'] => $order['direction']];
         })->toArray();
+    }
+
+    /**
+     * Flush all of the model's records from the engine.
+     *
+     * @param  \Illuminate\Database\Eloquent\Model $model
+     * @return void
+     */
+    public function flush($model)
+    {
+        $this->elastic->indices()->delete([
+            'index' => $this->toIndex($model),
+            'type' => $this->type,
+        ]);
+    }
+
+    /**
+     * @param $model
+     * @return string
+     */
+    private function toIndex($model)
+    {
+        return $this->index.'_'.$model->searchableAs();
     }
 }

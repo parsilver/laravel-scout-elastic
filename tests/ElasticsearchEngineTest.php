@@ -19,8 +19,8 @@ class ElasticsearchEngineTest extends PHPUnit_Framework_TestCase
                 [
                     'update' => [
                         '_id' => 1,
-                        '_index' => 'scout',
-                        '_type' => 'table',
+                        '_index' => 'scout_table',
+                        '_type' => 'doc',
                     ]
                 ],
                 [
@@ -42,8 +42,8 @@ class ElasticsearchEngineTest extends PHPUnit_Framework_TestCase
                 [
                     'delete' => [
                         '_id' => 1,
-                        '_index' => 'scout',
-                        '_type' => 'table',
+                        '_index' => 'scout_table',
+                        '_type' => 'doc',
                     ]
                 ],
             ]
@@ -57,8 +57,8 @@ class ElasticsearchEngineTest extends PHPUnit_Framework_TestCase
     {
         $client = Mockery::mock('Elasticsearch\Client');
         $client->shouldReceive('search')->with([
-            'index' => 'scout',
-            'type' => 'table',
+            'index' => 'scout_table',
+            'type' => 'doc',
             'body' => [
                 'query' => [
                     'bool' => [
@@ -133,6 +133,8 @@ class ElasticsearchEngineTest extends PHPUnit_Framework_TestCase
 
 class ElasticsearchEngineTestModel extends \Illuminate\Database\Eloquent\Model
 {
+    use \Laravel\Scout\Searchable;
+
     public function getIdAttribute()
     {
         return 1;
